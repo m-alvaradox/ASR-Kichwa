@@ -1,0 +1,9 @@
+torch
+torchaudio
+numpy
+pandas
+matplotlib
+scipy
+soundfile
+jiwer
+tqdm
