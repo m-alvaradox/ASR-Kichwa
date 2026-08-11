@@ -3,10 +3,6 @@ import pandas as pd
 
 
 class Vocabulary:
-    """
-    Construye un vocabulario a partir de las transcripciones
-    y permite convertir texto <-> índices.
-    """
 
     def __init__(self):
 
@@ -31,12 +27,12 @@ class Vocabulary:
 
         df = pd.read_csv(metadata_path)
 
-        # Eliminar filas sin transcripción
-        df = df.dropna(subset=["sentence"])
+        # Cambiar "sentence" por "transcription"
+        df = df.dropna(subset=["transcription"])
 
         characters = set()
 
-        for sentence in df["sentence"]:
+        for sentence in df["transcription"]: # Cambiar aquí también
 
             sentence = str(sentence)
 

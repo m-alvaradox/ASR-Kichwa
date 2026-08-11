@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traductor Kichwa ASR</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chewy&family=Fredoka:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+    <section id="pantalla-1" class="pantalla activa fondo-oliva">
+        <h1 class="titulo-principal texto-blanco">Transcriptor Kichwa</h1>
+        
+        <div class="tarjeta-oscura">
+            <h2 class="titulo-secundario">Sube tu archivo de audio</h2>
+            <p class="texto-cuerpo">Selecciona un archivo .wav para que la red neuronal lo analice.</p>
+            
+            <div class="contenedor-input">
+                <input type="file" id="audioInput" accept=".wav, .mp3" hidden>
+                <label for="audioInput" class="boton-archivo" id="labelArchivo">Elegir Archivo (.WAV o .MP3)</label>
+            </div>
+            
+            <button id="btnTranscribir" class="boton-accion" disabled>Transcribir Audio</button>
+        </div>
+    </section>
+
+    <section id="pantalla-2" class="pantalla fondo-oliva">
+        <h1 class="titulo-principal texto-blanco parpadeo">Transcribiendo audio...</h1>
+        <div class="spinner"></div>
+    </section>
+
+    <section id="pantalla-3" class="pantalla fondo-negro">
+        <h1 class="titulo-principal texto-blanco">Texto Transcrito</h1>
+        <p class="subtitulo-blanco">Traducción generada exitosamente.</p>
+        
+        <div class="tarjeta-lima">
+            <p id="textoResultado" class="texto-cuerpo-oscuro">Aquí aparecerá el texto en Kichwa...</p>
+        </div>
+
+        <div class="contenedor-botones">
+            <button id="btnDescargarTXT" class="boton-descarga">Descargar .TXT</button>
+            <button id="btnDescargarPDF" class="boton-descarga">Descargar .PDF</button>
+            <button id="btnNuevoAudio" class="boton-secundario">Subir otro audio</button>
+        </div>
+    </section>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
