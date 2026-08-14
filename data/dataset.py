@@ -19,7 +19,10 @@ class KillKanDataset(Dataset):
         self.sample_rate = sample_rate
         self.vocabulary = vocabulary
 
-        self.data = pd.read_csv(metadata_path)
+        if isinstance(metadata_path, pd.DataFrame):
+            self.data = metadata_path.copy()
+        else:
+            self.data = pd.read_csv(metadata_path)
 
         self.data = self.data.dropna(subset=["sentence"])
 
@@ -61,3 +64,38 @@ class KillKanDataset(Dataset):
         )
 
         return waveform, target
+
+
+class KillKanEmbeddingsDataset(Dataset):
+
+    def __init__(
+            self,
+            metadata_path,
+            embeddings_dir,
+            vocabulary: Vocabulary
+    ):
+        self.embeddings_dir = embeddings_dir
+        self.vocabulary = vocabulary
+
+        if isinstance(metadata_path, pd.DataFrame):
+            self.data = metadata_path.copy()
+        else:
+            self.data = pd.read_csv(metadata_path)
+        self.data = self.data.dropna(subset=["transcription"])
+        self.data.reset_index(drop=True, inplace=True)
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        row = self.data.iloc[idx]
+
+        filename = row["filename"]
+        emb_path = os.path.join(self.embeddings_dir, filename + ".pt")
+
+        embedding = torch.load(emb_path).squeeze(0)
+        sentence = row["transcription"]
+        target = self.vocabulary.text_to_indices(sentence)
+        target = torch.tensor(target, dtype=torch.long)
+
+        return embedding, target
