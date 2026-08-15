@@ -2,7 +2,7 @@ import torch.nn as nn
 
 
 class KichwaDecoder1D(nn.Module):
-    def __init__(self, input_dim=768, hidden_dim=512, vocab_size=50, dropout=0.25):
+    def __init__(self, input_dim=768, hidden_dim=512, vocab_size=50, dropout=0.15):
         super(KichwaDecoder1D, self).__init__()
 
         self.input_norm = nn.LayerNorm(input_dim)

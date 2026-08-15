@@ -2,10 +2,12 @@ import os
 import sys
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from jiwer import cer, wer
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -108,13 +110,18 @@ def main():
     train_loader = load_dataloader(train_source, train_embeddings_dir, vocabulary, batch_size=16, shuffle=True)
     valid_loader = load_dataloader(valid_source, valid_embeddings_dir, vocabulary, batch_size=16, shuffle=False)
 
-    model = KichwaDecoder1D(input_dim=768, hidden_dim=512, vocab_size=len(vocabulary), dropout=0.25).to(device)
+    model = KichwaDecoder1D(input_dim=768, hidden_dim=512, vocab_size=len(vocabulary), dropout=0.15).to(device)
     criterion = nn.CTCLoss(blank=0, zero_infinity=True)
     optimizer = optim.AdamW(model.parameters(), lr=3e-4, weight_decay=0.01)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=3)
 
     best_val_loss = float("inf")
     num_epochs = 50
+
+    train_loss_history = []
+    val_loss_history = []
+    val_cer_history = []
+    val_wer_history = []
 
     for epoch in range(num_epochs):
         model.train()
@@ -141,6 +148,9 @@ def main():
 
         model.eval()
         val_loss = 0.0
+        val_cer = 0.0
+        val_wer = 0.0
+
         with torch.no_grad():
             val_progress = tqdm(valid_loader, desc=f"Epoch {epoch + 1}/{num_epochs} [valid]", leave=False)
             for embeddings, targets, input_lengths, target_lengths in val_progress:
@@ -152,12 +162,40 @@ def main():
                 loss = criterion(log_probs, targets, input_lengths, target_lengths)
 
                 val_loss += loss.item()
+
+                batch_cer = 0.0
+                batch_wer = 0.0
+
+                for i in range(logits.size(0)):
+                    pred_text = greedy_ctc_decode(logits[i].unsqueeze(0), vocabulary)
+                    real_indices = targets[i][:target_lengths[i]].cpu().tolist()
+                    real_text = vocabulary.indices_to_text(real_indices)
+
+                    if len(real_text.strip()) > 0:
+                        if len(pred_text.strip()) == 0:
+                            batch_cer += 1.0
+                            batch_wer += 1.0
+                        else:
+                            batch_cer += cer(real_text, pred_text)
+                            batch_wer += wer(real_text, pred_text)
+
+                val_cer += batch_cer / logits.size(0)
+                val_wer += batch_wer / logits.size(0)
+                
                 val_progress.set_postfix(loss=f"{loss.item():.4f}")
 
         val_loss /= max(len(valid_loader), 1)
+        val_cer /= max(len(valid_loader), 1)
+        val_wer /= max(len(valid_loader), 1)
+
+        train_loss_history.append(train_loss)
+        val_loss_history.append(val_loss)
+        val_cer_history.append(val_cer)
+        val_wer_history.append(val_wer)
+
         scheduler.step(val_loss)
 
-        print(f"Epoca [{epoch + 1}/{num_epochs}] | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
+        print(f"Epoca [{epoch + 1}/{num_epochs}] | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | CER: {val_cer:.4f} | WER: {val_wer:.4f}")
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
@@ -165,6 +203,26 @@ def main():
             print(f"  -> Nuevo mejor modelo guardado (Val Loss: {val_loss:.4f})")
 
     print("Entrenamiento finalizado.")
+
+    plt.figure(figsize=(8, 6))
+    plt.plot(train_loss_history, label='Train Loss')
+    plt.plot(val_loss_history, label='Validation Loss')
+    plt.title('Model Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.savefig(WORK_DIR / "loss_plot.png")
+    plt.close()
+
+    plt.figure(figsize=(8, 6))
+    plt.plot(val_cer_history, label='Validation CER', color='green')
+    plt.plot(val_wer_history, label='Validation WER', color='red')
+    plt.title('CER and WER Progress')
+    plt.xlabel('Epoch')
+    plt.ylabel('Error Rate')
+    plt.legend()
+    plt.savefig(WORK_DIR / "metrics_plot.png")
+    plt.close()
 
 
 if __name__ == "__main__":
