@@ -7,7 +7,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from data.collate import collate_fn
 from data.dataset import KillKanEmbeddingsDataset
 from models.decoder import KichwaDecoder1D
 from utils.vocabulary import Vocabulary
@@ -46,14 +45,6 @@ def split_training_frame(metadata_path: Path):
     training_frame = frame.drop(validation_frame.index).reset_index(drop=True)
     validation_frame = validation_frame.reset_index(drop=True)
     return training_frame, validation_frame
-
-    return DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        collate_fn=collate_fn,
-    )
-
 
 def greedy_ctc_decode(logits, vocabulary: Vocabulary):
     pred_ids = logits.argmax(dim=-1).squeeze(0).cpu().tolist()
