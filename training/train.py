@@ -6,6 +6,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -34,6 +35,15 @@ def build_vocabulary(metadata_path: Path) -> Vocabulary:
     vocabulary = Vocabulary()
     vocabulary.build(str(metadata_path))
     return vocabulary
+
+
+def collate_fn(batch):
+    embeddings, targets = zip(*batch)
+    input_lengths = torch.tensor([len(emb) for emb in embeddings], dtype=torch.long)
+    target_lengths = torch.tensor([len(t) for t in targets], dtype=torch.long)
+    embeddings_padded = pad_sequence(embeddings, batch_first=True, padding_value=0.0)
+    targets_padded = pad_sequence(targets, batch_first=True, padding_value=0)
+    return embeddings_padded, targets_padded, input_lengths, target_lengths
 
 
 def load_dataloader(metadata_path, embeddings_dir: Path, vocabulary: Vocabulary, batch_size: int, shuffle: bool):
