@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -6,6 +7,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
+from tqdm import tqdm
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 from data.collate import collate_fn
 from data.dataset import KillKanEmbeddingsDataset
@@ -13,7 +19,6 @@ from models.decoder import KichwaDecoder1D
 from utils.vocabulary import Vocabulary
 
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
 WORK_DIR = ROOT_DIR
 CHECKPOINT_DIR = WORK_DIR / "checkpoints"
 
@@ -32,11 +37,18 @@ def build_vocabulary(metadata_path: Path) -> Vocabulary:
     return vocabulary
 
 
-def load_dataloader(metadata_path: Path, embeddings_dir: Path, vocabulary: Vocabulary, batch_size: int, shuffle: bool):
+def load_dataloader(metadata_path, embeddings_dir: Path, vocabulary: Vocabulary, batch_size: int, shuffle: bool):
     dataset = KillKanEmbeddingsDataset(
-        metadata_path=str(metadata_path),
+        metadata_path=metadata_path,
         embeddings_dir=str(embeddings_dir),
         vocabulary=vocabulary,
+    )
+
+    return DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        collate_fn=collate_fn,
     )
 
 
@@ -46,13 +58,6 @@ def split_training_frame(metadata_path: Path):
     training_frame = frame.drop(validation_frame.index).reset_index(drop=True)
     validation_frame = validation_frame.reset_index(drop=True)
     return training_frame, validation_frame
-
-    return DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=shuffle,
-        collate_fn=collate_fn,
-    )
 
 
 def greedy_ctc_decode(logits, vocabulary: Vocabulary):
@@ -97,16 +102,17 @@ def main():
     model = KichwaDecoder1D(input_dim=768, hidden_dim=512, vocab_size=len(vocabulary), dropout=0.25).to(device)
     criterion = nn.CTCLoss(blank=0, zero_infinity=True)
     optimizer = optim.AdamW(model.parameters(), lr=3e-4, weight_decay=0.01)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=5)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=3)
 
     best_val_loss = float("inf")
-    num_epochs = 25
+    num_epochs = 50
 
     for epoch in range(num_epochs):
         model.train()
         train_loss = 0.0
 
-        for embeddings, targets, input_lengths, target_lengths in train_loader:
+        progress = tqdm(train_loader, desc=f"Epoch {epoch + 1}/{num_epochs} [train]", leave=True)
+        for embeddings, targets, input_lengths, target_lengths in progress:
             embeddings = embeddings.to(device)
             targets = targets.to(device)
 
@@ -120,13 +126,15 @@ def main():
             optimizer.step()
 
             train_loss += loss.item()
+            progress.set_postfix(loss=f"{loss.item():.4f}")
 
         train_loss /= max(len(train_loader), 1)
 
         model.eval()
         val_loss = 0.0
         with torch.no_grad():
-            for embeddings, targets, input_lengths, target_lengths in valid_loader:
+            val_progress = tqdm(valid_loader, desc=f"Epoch {epoch + 1}/{num_epochs} [valid]", leave=False)
+            for embeddings, targets, input_lengths, target_lengths in val_progress:
                 embeddings = embeddings.to(device)
                 targets = targets.to(device)
 
@@ -135,6 +143,7 @@ def main():
                 loss = criterion(log_probs, targets, input_lengths, target_lengths)
 
                 val_loss += loss.item()
+                val_progress.set_postfix(loss=f"{loss.item():.4f}")
 
         val_loss /= max(len(valid_loader), 1)
         scheduler.step(val_loss)
