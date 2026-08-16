@@ -77,7 +77,7 @@ def cargar_modelos():
     extractor, _, _ = load_partial_weights(extractor, pesos_extractor, num_layers_to_load=6)
     extractor.eval()
 
-    decodificador = KichwaDecoder1D(input_dim=768, hidden_dim=512, vocab_size=len(vocab)).to(dispositivo)
+    decodificador = KichwaDecoder1D(input_dim=768, hidden_dim=256, vocab_size=len(vocab)).to(dispositivo)
     pesos_decodificador = torch.load("checkpoints/kichwa_decoder_conv1d.pt", map_location=dispositivo)
     decodificador.load_state_dict(pesos_decodificador)
     decodificador.eval()

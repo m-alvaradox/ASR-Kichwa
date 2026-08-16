@@ -20,7 +20,6 @@ from data.dataset import KillKanEmbeddingsDataset
 from models.decoder import KichwaDecoder1D
 from utils.vocabulary import Vocabulary
 
-
 WORK_DIR = ROOT_DIR
 CHECKPOINT_DIR = WORK_DIR / "checkpoints"
 
@@ -110,120 +109,135 @@ def main():
     train_loader = load_dataloader(train_source, train_embeddings_dir, vocabulary, batch_size=16, shuffle=True)
     valid_loader = load_dataloader(valid_source, valid_embeddings_dir, vocabulary, batch_size=16, shuffle=False)
 
-    model = KichwaDecoder1D(input_dim=768, hidden_dim=512, vocab_size=len(vocabulary), dropout=0.15).to(device)
+    model = KichwaDecoder1D(input_dim=768, hidden_dim=256, vocab_size=len(vocabulary), dropout=0.25).to(device)
     criterion = nn.CTCLoss(blank=0, zero_infinity=True)
-    optimizer = optim.AdamW(model.parameters(), lr=3e-4, weight_decay=0.01)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=3)
+    optimizer = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=0.05)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.25, patience=2)
 
     best_val_loss = float("inf")
-    num_epochs = 50
+    num_epochs = 40
+    patience = 4
+    epochs_no_improve = 0
 
     train_loss_history = []
     val_loss_history = []
     val_cer_history = []
     val_wer_history = []
 
-    for epoch in range(num_epochs):
-        model.train()
-        train_loss = 0.0
+    try:
+        for epoch in range(num_epochs):
+            model.train()
+            train_loss = 0.0
 
-        progress = tqdm(train_loader, desc=f"Epoch {epoch + 1}/{num_epochs} [train]", leave=True)
-        for embeddings, targets, input_lengths, target_lengths in progress:
-            embeddings = embeddings.to(device)
-            targets = targets.to(device)
-
-            optimizer.zero_grad()
-            logits = model(embeddings)
-            log_probs = logits.log_softmax(2).transpose(0, 1)
-            loss = criterion(log_probs, targets, input_lengths, target_lengths)
-
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-            optimizer.step()
-
-            train_loss += loss.item()
-            progress.set_postfix(loss=f"{loss.item():.4f}")
-
-        train_loss /= max(len(train_loader), 1)
-
-        model.eval()
-        val_loss = 0.0
-        val_cer = 0.0
-        val_wer = 0.0
-
-        with torch.no_grad():
-            val_progress = tqdm(valid_loader, desc=f"Epoch {epoch + 1}/{num_epochs} [valid]", leave=False)
-            for embeddings, targets, input_lengths, target_lengths in val_progress:
+            progress = tqdm(train_loader, desc=f"Epoch {epoch + 1}/{num_epochs} [train]", leave=True)
+            for embeddings, targets, input_lengths, target_lengths in progress:
                 embeddings = embeddings.to(device)
                 targets = targets.to(device)
 
+                optimizer.zero_grad()
                 logits = model(embeddings)
                 log_probs = logits.log_softmax(2).transpose(0, 1)
                 loss = criterion(log_probs, targets, input_lengths, target_lengths)
 
-                val_loss += loss.item()
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                optimizer.step()
 
-                batch_cer = 0.0
-                batch_wer = 0.0
+                train_loss += loss.item()
+                progress.set_postfix(loss=f"{loss.item():.4f}")
 
-                for i in range(logits.size(0)):
-                    pred_text = greedy_ctc_decode(logits[i].unsqueeze(0), vocabulary)
-                    real_indices = targets[i][:target_lengths[i]].cpu().tolist()
-                    real_text = vocabulary.indices_to_text(real_indices)
+            train_loss /= max(len(train_loader), 1)
 
-                    if len(real_text.strip()) > 0:
-                        if len(pred_text.strip()) == 0:
-                            batch_cer += 1.0
-                            batch_wer += 1.0
-                        else:
-                            batch_cer += cer(real_text, pred_text)
-                            batch_wer += wer(real_text, pred_text)
+            model.eval()
+            val_loss = 0.0
+            val_cer = 0.0
+            val_wer = 0.0
 
-                val_cer += batch_cer / logits.size(0)
-                val_wer += batch_wer / logits.size(0)
-                
-                val_progress.set_postfix(loss=f"{loss.item():.4f}")
+            with torch.no_grad():
+                val_progress = tqdm(valid_loader, desc=f"Epoch {epoch + 1}/{num_epochs} [valid]", leave=False)
+                for embeddings, targets, input_lengths, target_lengths in val_progress:
+                    embeddings = embeddings.to(device)
+                    targets = targets.to(device)
 
-        val_loss /= max(len(valid_loader), 1)
-        val_cer /= max(len(valid_loader), 1)
-        val_wer /= max(len(valid_loader), 1)
+                    logits = model(embeddings)
+                    log_probs = logits.log_softmax(2).transpose(0, 1)
+                    loss = criterion(log_probs, targets, input_lengths, target_lengths)
 
-        train_loss_history.append(train_loss)
-        val_loss_history.append(val_loss)
-        val_cer_history.append(val_cer)
-        val_wer_history.append(val_wer)
+                    val_loss += loss.item()
 
-        scheduler.step(val_loss)
+                    batch_cer = 0.0
+                    batch_wer = 0.0
 
-        print(f"Epoca [{epoch + 1}/{num_epochs}] | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | CER: {val_cer:.4f} | WER: {val_wer:.4f}")
+                    for i in range(logits.size(0)):
+                        pred_text = greedy_ctc_decode(logits[i].unsqueeze(0), vocabulary)
+                        real_indices = targets[i][:target_lengths[i]].cpu().tolist()
+                        real_text = vocabulary.indices_to_text(real_indices)
 
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            torch.save(model.state_dict(), DECODER_CHECKPOINT)
-            print(f"  -> Nuevo mejor modelo guardado (Val Loss: {val_loss:.4f})")
+                        if len(real_text.strip()) > 0:
+                            if len(pred_text.strip()) == 0:
+                                batch_cer += 1.0
+                                batch_wer += 1.0
+                            else:
+                                batch_cer += cer(real_text, pred_text)
+                                batch_wer += wer(real_text, pred_text)
 
-    print("Entrenamiento finalizado.")
+                    val_cer += batch_cer / logits.size(0)
+                    val_wer += batch_wer / logits.size(0)
+                    
+                    val_progress.set_postfix(loss=f"{loss.item():.4f}")
 
-    plt.figure(figsize=(8, 6))
-    plt.plot(train_loss_history, label='Train Loss')
-    plt.plot(val_loss_history, label='Validation Loss')
-    plt.title('Model Loss')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.legend()
-    plt.savefig(WORK_DIR / "loss_plot.png")
-    plt.close()
+            val_loss /= max(len(valid_loader), 1)
+            val_cer /= max(len(valid_loader), 1)
+            val_wer /= max(len(valid_loader), 1)
 
-    plt.figure(figsize=(8, 6))
-    plt.plot(val_cer_history, label='Validation CER', color='green')
-    plt.plot(val_wer_history, label='Validation WER', color='red')
-    plt.title('CER and WER Progress')
-    plt.xlabel('Epoch')
-    plt.ylabel('Error Rate')
-    plt.legend()
-    plt.savefig(WORK_DIR / "metrics_plot.png")
-    plt.close()
+            scheduler.step(val_loss)
 
+            train_loss_history.append(train_loss)
+            val_loss_history.append(val_loss)
+            val_cer_history.append(val_cer)
+            val_wer_history.append(val_wer)
+
+            print(f"Epoca [{epoch + 1}/{num_epochs}] | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | CER: {val_cer:.4f} | WER: {val_wer:.4f}")
+
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                epochs_no_improve = 0
+                torch.save(model.state_dict(), DECODER_CHECKPOINT)
+                print(f"  -> Nuevo mejor modelo guardado (Val Loss: {val_loss:.4f})")
+            else:
+                epochs_no_improve += 1                
+                if epochs_no_improve >= patience:
+                    print(f"  -> Early stopping en la epoca {epoch + 1}.")
+                    break
+
+    except KeyboardInterrupt:
+        print("\nEntrenamiento interrumpido.")
+
+    finally:
+        if len(train_loss_history) > 0:
+            print("Entrenamiento finalizado.")
+
+            plt.figure(figsize=(8, 6))
+            plt.plot(train_loss_history, label='Train Loss')
+            plt.plot(val_loss_history, label='Validation Loss')
+            plt.title('Gráfica Perdida')
+            plt.xlabel('Épocas')
+            plt.ylabel('Perdida')
+            plt.legend()
+            plt.savefig(WORK_DIR / "perdida.png")
+            plt.close()
+
+            plt.figure(figsize=(8, 6))
+            plt.plot(val_cer_history, label='Validation CER', color='green')
+            plt.plot(val_wer_history, label='Validation WER', color='red')
+            plt.title('CER and WER')
+            plt.xlabel('Épocas')
+            plt.ylabel('Radio Error')
+            plt.legend()
+            plt.savefig(WORK_DIR / "metricas.png")
+            plt.close()
+            
+            print("Graficas guardadas con exito.")
 
 if __name__ == "__main__":
     main()
