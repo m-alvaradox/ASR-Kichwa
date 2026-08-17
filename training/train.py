@@ -2,7 +2,9 @@ import os
 import sys
 from pathlib import Path
 
+import jiwer
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
@@ -81,6 +83,57 @@ def greedy_ctc_decode(logits, vocabulary: Vocabulary):
         previous_id = token_id
 
     return "".join(decoded_chars)
+
+
+def build_confusion_matrix(model, loader, vocabulary: Vocabulary, device):
+    vocab_chars = sorted(c for c in vocabulary.char2idx.keys() if c != "<blank>")
+    char_to_row = {c: i for i, c in enumerate(vocab_chars)}
+    n = len(vocab_chars)
+    confusion = np.zeros((n, n), dtype=int)
+
+    model.eval()
+    with torch.no_grad():
+        for embeddings, targets, input_lengths, target_lengths in tqdm(loader, desc="Matriz de confusion"):
+            embeddings = embeddings.to(device)
+            targets = targets.to(device)
+            logits = model(embeddings)
+
+            for i in range(logits.size(0)):
+                pred_text = greedy_ctc_decode(logits[i].unsqueeze(0), vocabulary)
+                real_indices = targets[i][:target_lengths[i]].cpu().tolist()
+                real_text = vocabulary.indices_to_text(real_indices)
+
+                if len(real_text.strip()) == 0 or len(pred_text.strip()) == 0:
+                    continue
+
+                output = jiwer.process_characters(real_text, pred_text)
+                for alignment in output.alignments[0]:
+                    if alignment.type != "substitute":
+                        continue
+                    for offset in range(alignment.ref_end_idx - alignment.ref_start_idx):
+                        real_char = real_text[alignment.ref_start_idx + offset]
+                        hyp_idx = alignment.hyp_start_idx + offset
+                        if hyp_idx >= alignment.hyp_end_idx:
+                            continue
+                        pred_char = pred_text[hyp_idx]
+                        if real_char in char_to_row and pred_char in char_to_row:
+                            confusion[char_to_row[real_char], char_to_row[pred_char]] += 1
+
+    return confusion, vocab_chars
+
+
+def plot_confusion_matrix(confusion, vocab_chars, save_path: Path):
+    plt.figure(figsize=(10, 8))
+    plt.imshow(confusion, cmap="Blues")
+    plt.colorbar(label="Sustituciones")
+    plt.xticks(range(len(vocab_chars)), vocab_chars, rotation=90)
+    plt.yticks(range(len(vocab_chars)), vocab_chars)
+    plt.xlabel("Caracter predicho")
+    plt.ylabel("Caracter real")
+    plt.title("Matriz de confusion (sustituciones de caracteres)")
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
 
 
 def main():
@@ -236,8 +289,17 @@ def main():
             plt.legend()
             plt.savefig(WORK_DIR / "metricas.png")
             plt.close()
-            
+
             print("Graficas guardadas con exito.")
+
+            if DECODER_CHECKPOINT.exists():
+                print("Generando matriz de confusion")
+                best_model = KichwaDecoder1D(input_dim=768, hidden_dim=256, vocab_size=len(vocabulary), dropout=0.25).to(device)
+                best_model.load_state_dict(torch.load(DECODER_CHECKPOINT, map_location=device))
+
+                confusion, vocab_chars = build_confusion_matrix(best_model, valid_loader, vocabulary, device)
+                plot_confusion_matrix(confusion, vocab_chars, WORK_DIR / "matriz_confusion.png")
+                print("Matriz de confusion guardada con exito.")
 
 if __name__ == "__main__":
     main()
