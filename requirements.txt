@@ -11,3 +11,4 @@ librosa
 soundfile
 jiwer
 tqdm
+transformers
