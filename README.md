@@ -8,6 +8,14 @@ FastAPI y una interfaz web estática.
 > Este proyecto transcribe Kichwa a texto en Kichwa; no realiza traducción a
 > español.
 
+---
+## NOTA IMPORTANTE PARA LA REVISIÓN
+
+Como entregable de este proyecto, se incluyen las carpetas del repositorio en GitHub, la carpeta `checkpoints` con los valores de los modelos ya generados y un notebook con la recopilación de todas las funciones utilizadas. 
+
+**Para probar el sistema, siga estrictamente los pasos de este README (Ejecutar el proyecto) y NO ejecute el notebook.** Todo el sistema (backend, frontend, etc.) está listo para funcionar directo desde el repositorio. Ejecutar el notebook no es necesario y podría sobrescribir los datos y modelos preguardados.
+---
+
 ## Arquitectura general
 
 ```text
@@ -28,25 +36,20 @@ Audio WAV/MP3
 - Al menos 8 GB de RAM.
 - Espacio adicional para los checkpoints y los embeddings.
 - GPU NVIDIA compatible con CUDA (opcional). En CPU funciona más lentamente.
-- Dos archivos de pesos exportados o descargados desde el notebook de
-  entrenamiento.
 
 No es necesario instalar Node.js: el frontend usa HTML, CSS y JavaScript sin
 proceso de compilación.
 
-## Archivos que deben obtenerse del notebook o carpetas
+## Modelos y Checkpoints incluidos
 
-Los modelos no están incluidos en Git porque `checkpoints/` está excluido en
-`.gitignore`. SI ES EL PROFESOR Y ESTA LA CARPETA NO ES NECESARIO AGREGAR LO SIGUIENTE:
-Después de ejecutar el notebook, descargar o copiar estos
-artefactos:
+Los modelos no están incluidos en el repositorio de Git original porque la carpeta `checkpoints/` está excluida en `.gitignore`. Sin embargo, **para este entregable, la carpeta `checkpoints/` Ya esta incluida** lista para su uso:
 
-| Archivo generado | Ubicación en el proyecto | Uso |
+| Archivo incluido | Ubicación en el proyecto | Uso |
 | --- | --- | --- |
 | `wav2vec_small_clean.pt` | `checkpoints/wav2vec_small_clean.pt` | Pesos del extractor Wav2Vec2 |
 | `kichwa_decoder_conv1d.pt` | `checkpoints/kichwa_decoder_conv1d.pt` | Pesos del decodificador Kichwa |
 
-La estructura mínima debe quedar así:
+La estructura mínima del proyecto queda así:
 
 ```text
 ASR-Kichwa/
@@ -62,35 +65,23 @@ ASR-Kichwa/
 `-- requirements.txt
 ```
 
-### Vocabulario del notebook
+### Vocabulario
 
-El checkpoint del decodificador y el vocabulario son inseparables. El notebook
-debe conservar el mismo mapeo `char2idx` usado durante el entrenamiento. Se
-recomienda exportarlo desde el notebook:
-
-```python
-import json
-
-with open("vocab.json", "w", encoding="utf-8") as archivo:
-    json.dump(vocab.char2idx, archivo, ensure_ascii=False, indent=2)
-```
-
-Después debe copiarse como `checkpoints/vocab.json`. La aplicación actualmente
+El checkpoint del decodificador y el vocabulario son inseparables. La aplicación actualmente
 reconstruye el vocabulario leyendo `dataset/metadata_train.csv`; por tanto, ese
 CSV debe ser exactamente la versión usada durante el entrenamiento, con la
 misma limpieza de texto y los mismos caracteres.
 
-Para verificar el número de salidas desde el notebook:
+Para verificar el número de salidas:
 
 ```python
 import torch
 
-checkpoint = torch.load("kichwa_decoder_conv1d.pt", map_location="cpu")
+checkpoint = torch.load("checkpoints/kichwa_decoder_conv1d.pt", map_location="cpu")
 print(checkpoint["classifier.weight"].shape)
-print("Tamaño del vocabulario:", len(vocab))
 ```
 
-El primer número del `shape` debe coincidir con `len(vocab)`. Por ejemplo,
+El primer número del `shape` debe coincidir con la longitud del vocabulario. Por ejemplo,
 `torch.Size([36, 512])` requiere un vocabulario de 36 símbolos.
 
 ## Instalación del ambiente
@@ -225,11 +216,6 @@ O llamar directamente al intérprete:
 .\.venv\Scripts\python.exe -m http.server 5500 --directory frontend
 ```
 
-### No existe `checkpoints/...`
-
-Crear la carpeta `checkpoints` y copiar los dos archivos `.pt` generados por el
-notebook. Estos archivos no se descargan al clonar el repositorio.
-
 ### Error `size mismatch for classifier.weight`
 
 Ejemplo:
@@ -261,7 +247,7 @@ Comprobar que:
 3. El frontend se haya abierto desde `http://localhost:5500`.
 4. El archivo seleccionado sea `.wav` o `.mp3`.
 
-## Entrenamiento y embeddings
+## Entrenamiento y embeddings (Opcional)
 
 `training/train.py` está diseñado para entrenar el decodificador a partir de
 embeddings ya calculados en:
@@ -271,8 +257,8 @@ embeddings/train/
 embeddings/valid/
 ```
 
-Tanto `embeddings/` como `checkpoints/` están excluidos de Git por su tamaño.
-Para reproducir el entrenamiento hacen falta:
+Tanto `embeddings/` como `checkpoints/` están excluidos de Git por su tamaño **(aunque los checkpoints se proveen listos en este entregable)**.
+Para reproducir el entrenamiento completo desde cero harían falta:
 
 - Los audios originales.
 - Los metadatos de entrenamiento y validación.
@@ -283,7 +269,7 @@ Para reproducir el entrenamiento hacen falta:
 El script de entrenamiento actual necesita completar la construcción del
 `DataLoader` y su función de padding (`collate_fn`) antes de utilizarse de forma
 independiente. Por ahora, el notebook original es una parte necesaria del flujo
-reproducible de entrenamiento.
+reproducible de entrenamiento (reiterando que **no debe ejecutarse para probar la aplicación**).
 
 ## Archivos principales
 
