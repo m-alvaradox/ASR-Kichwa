@@ -14,13 +14,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let transcripcionFinal = "";
 
+    const modalAlerta = document.getElementById('modalAlerta');
+    const textoAlerta = document.getElementById('textoAlerta');
+    const btnCerrarAlerta = document.getElementById('btnCerrarAlerta');
+
+    function mostrarAlerta(mensaje) {
+        textoAlerta.textContent = mensaje;
+        modalAlerta.classList.add('mostrar');
+    }
+
+    btnCerrarAlerta.addEventListener('click', () => {
+        modalAlerta.classList.remove('mostrar');
+    });
+
     audioInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
             labelArchivo.textContent = file.name;
             btnTranscribir.disabled = false;
         } else {
-            labelArchivo.textContent = "Elegir Archivo (.WAV o .MP3)";
+            labelArchivo.innerHTML = '<span class="icono-archivo">♫</span> Elegir Archivo (.WAV o .MP3)';
             btnTranscribir.disabled = true;
         }
     });
@@ -43,7 +56,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: formData
             });
 
-            if (!response.ok) throw new Error("Error en la transcripción");
+            if (!response.ok) {
+                if (response.status === 400) {
+                    throw new Error("FORMATO_INVALIDO");
+                }
+                if (response.status === 500) {
+                    throw new Error("AUDIO_CORRUPTO");
+                }
+                throw new Error("Error en la transcripción");
+            }
 
             const data = await response.json();
 
@@ -58,9 +79,18 @@ document.addEventListener('DOMContentLoaded', () => {
             cambiarPantalla(pantalla2, pantalla3);
 
         } catch (error) {
-            alert("Error conectando con el servidor. Verifica que main.py esté corriendo.");
-            textoResultado.textContent = "Error al generar la transcripción.";
-            cambiarPantalla(pantalla2, pantalla1);
+            if (error.message === "AUDIO_CORRUPTO") {
+                mostrarAlerta("El archivo de audio está corrupto o tiene un formato interno no soportado. Por favor, intenta subir un archivo diferente.");
+            } else if (error.message === "FORMATO_INVALIDO") {
+                mostrarAlerta("Formato no permitido. Por favor, asegúrate de subir únicamente archivos con extensión .wav o .mp3.");
+            } else {
+                mostrarAlerta("Error conectando con el servidor. Verifica que main.py esté corriendo.");
+            }
+            audioInput.value = "";
+            labelArchivo.innerHTML = '<span class="icono-archivo">♫</span> Elegir Archivo (.WAV o .MP3)';
+            btnTranscribir.disabled = true;
+            textoResultado.textContent = "Error al procesar el audio.";
+            cambiarPantalla(pantalla2, pantalla1); 
         }
     });
 
@@ -90,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnNuevoAudio.addEventListener('click', () => {
         audioInput.value = "";
-        labelArchivo.textContent = "Elegir Archivo de Audio .WAV";
+        labelArchivo.innerHTML = '<span class="icono-archivo">♫</span> Elegir Archivo (.WAV o .MP3)';
         btnTranscribir.disabled = true;
         cambiarPantalla(pantalla3, pantalla1);
     });

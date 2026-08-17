@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=9">
+    <link rel="stylesheet" href="css/style.css?v=10">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
@@ -55,6 +55,14 @@
             </div>
         </div>
     </section>
+
+    <div id="modalAlerta" class="modal-alerta-overlay">
+        <div class="tarjeta modal-alerta-caja">
+            <h2 class="titulo-card" style="font-size: 1.6rem; margin-bottom: 10px;">¡Aviso!</h2>
+            <p id="textoAlerta" class="desc-card"></p>
+            <button id="btnCerrarAlerta" class="boton-secundario" style="margin-top: 20px;">Entendido</button>
+        </div>
+    </div>
 
     <script src="js/app.js"></script>
 </body>

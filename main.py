@@ -112,6 +112,9 @@ async def transcribir_audio(audio: UploadFile = File(...)):
 
         texto_final = vocab.indices_to_text(indices_finales)
 
+    except Exception:
+        raise HTTPException(status_code=500, detail="AUDIO_CORRUPTO")
+
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
