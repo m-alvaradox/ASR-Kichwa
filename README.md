@@ -34,10 +34,11 @@ Audio WAV/MP3
 No es necesario instalar Node.js: el frontend usa HTML, CSS y JavaScript sin
 proceso de compilación.
 
-## Archivos que deben obtenerse del notebook
+## Archivos que deben obtenerse del notebook o carpetas
 
 Los modelos no están incluidos en Git porque `checkpoints/` está excluido en
-`.gitignore`. Después de ejecutar el notebook, descargar o copiar estos
+`.gitignore`. SI ES EL PROFESOR Y ESTA LA CARPETA NO ES NECESARIO AGREGAR LO SIGUIENTE:
+Después de ejecutar el notebook, descargar o copiar estos
 artefactos:
 
 | Archivo generado | Ubicación en el proyecto | Uso |
@@ -160,7 +161,7 @@ Si se conserva el ambiente antiguo llamado `venv`:
 .\venv\Scripts\python.exe -m http.server 5500 --directory frontend
 ```
 
-Abrir <http://localhost:5500>, seleccionar un archivo `.wav` o `.mp3` y pulsar
+Abrir <http://localhost:5500>, seleccionar un archivo `.wav` del grupo de muestra y pulsar
 el botón de transcripción. No se recomienda abrir `index.html` directamente con
 doble clic.
 
