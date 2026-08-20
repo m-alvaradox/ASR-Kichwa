@@ -17,7 +17,7 @@
     <section id="pantalla-1" class="pantalla activa">
         <div class="tarjeta">
             <h1 class="titulo-card">TRANSCRIPTOR KICHWA</h1>
-            <p class="desc-card">Selecciona un archivo .wav o .mp3 para que el sistema lo analice y devuelva su transcripción.</p>
+            <p class="desc-card">Selecciona un archivo .wav o .mp3, o graba tu voz directamente desde el navegador.</p>
 
             <div class="contenedor-input">
                 <input type="file" id="audioInput" accept=".wav, .mp3" hidden>
@@ -25,6 +25,17 @@
                     <span class="icono-archivo">♫</span>
                     Elegir Archivo (.WAV o .MP3)
                 </label>
+            </div>
+
+            <div class="separador"><span>o</span></div>
+
+            <div class="contenedor-grabacion">
+                <button id="btnGrabar" class="boton-grabar" type="button">
+                    <span class="icono-microfono" aria-hidden="true">●</span>
+                    <span id="textoBtnGrabar">Iniciar grabación</span>
+                </button>
+                <p id="estadoGrabacion" class="estado-grabacion" aria-live="polite">Usa el micrófono de tu dispositivo</p>
+                <audio id="audioPreview" class="audio-preview" controls hidden></audio>
             </div>
 
             <button id="btnTranscribir" class="boton-accion" disabled>Transcribir Audio</button>
@@ -64,6 +75,6 @@
         </div>
     </div>
 
-    <script src="js/app.js"></script>
+    <script src="js/app.js?v=11"></script>
 </body>
 </html>
