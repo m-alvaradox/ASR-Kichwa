@@ -219,4 +219,5 @@ __marimo__/
 
 dataset/wav
 checkpoints/
+deploy_checkpoints/
 embeddings/

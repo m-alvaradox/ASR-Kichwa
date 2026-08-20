@@ -15,6 +15,7 @@ from models.decoder import KichwaDecoder1D
 
 app = FastAPI(title="API Traductor Kichwa")
 ROOT_DIR = Path(__file__).resolve().parent
+CHECKPOINT_DIR = ROOT_DIR / os.getenv("CHECKPOINT_DIR", "checkpoints")
 
 app.add_middleware(
     CORSMiddleware,
@@ -76,13 +77,13 @@ def cargar_modelos():
     vocab.build(str(ROOT_DIR / "dataset" / "metadata_train.csv"))
     
     extractor = Wav2Vec2Partial(num_transformer_layers=6, dim=768).to(dispositivo)
-    pesos_extractor = torch.load(ROOT_DIR / "checkpoints" / "wav2vec_small_clean.pt", map_location=dispositivo)
+    pesos_extractor = torch.load(CHECKPOINT_DIR / "wav2vec_small_clean.pt", map_location=dispositivo)
     
     extractor, _, _ = load_partial_weights(extractor, pesos_extractor, num_layers_to_load=6)
     extractor.eval()
 
     decodificador = KichwaDecoder1D(input_dim=768, hidden_dim=256, vocab_size=len(vocab)).to(dispositivo)
-    pesos_decodificador = torch.load(ROOT_DIR / "checkpoints" / "kichwa_decoder_conv1d.pt", map_location=dispositivo)
+    pesos_decodificador = torch.load(CHECKPOINT_DIR / "kichwa_decoder_conv1d.pt", map_location=dispositivo)
     decodificador.load_state_dict(pesos_decodificador)
     decodificador.eval()
 
