@@ -1,16 +1,20 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 import numpy as np
 import torch
 import librosa
 import os
 import shutil
+from pathlib import Path
 
 from utils.vocabulary import Vocabulary
 from models.wav2vec import Wav2Vec2Partial
 from models.decoder import KichwaDecoder1D
 
 app = FastAPI(title="API Traductor Kichwa")
+ROOT_DIR = Path(__file__).resolve().parent
 
 app.add_middleware(
     CORSMiddleware,
@@ -69,16 +73,16 @@ def cargar_modelos():
     print("Iniciando servidor y cargando modelos en memoria...")
 
     vocab = Vocabulary()
-    vocab.build("dataset/metadata_train.csv")
+    vocab.build(str(ROOT_DIR / "dataset" / "metadata_train.csv"))
     
     extractor = Wav2Vec2Partial(num_transformer_layers=6, dim=768).to(dispositivo)
-    pesos_extractor = torch.load("checkpoints/wav2vec_small_clean.pt", map_location=dispositivo)
+    pesos_extractor = torch.load(ROOT_DIR / "checkpoints" / "wav2vec_small_clean.pt", map_location=dispositivo)
     
     extractor, _, _ = load_partial_weights(extractor, pesos_extractor, num_layers_to_load=6)
     extractor.eval()
 
     decodificador = KichwaDecoder1D(input_dim=768, hidden_dim=256, vocab_size=len(vocab)).to(dispositivo)
-    pesos_decodificador = torch.load("checkpoints/kichwa_decoder_conv1d.pt", map_location=dispositivo)
+    pesos_decodificador = torch.load(ROOT_DIR / "checkpoints" / "kichwa_decoder_conv1d.pt", map_location=dispositivo)
     decodificador.load_state_dict(pesos_decodificador)
     decodificador.eval()
 
@@ -123,3 +127,16 @@ async def transcribir_audio(audio: UploadFile = File(...)):
         "archivo": audio.filename,
         "transcripcion": texto_final
     }
+
+
+@app.get("/health", include_in_schema=False)
+def health():
+    return {"status": "ok", "device": str(dispositivo)}
+
+
+# El frontend y la API se publican en el mismo dominio en Railway.
+app.mount(
+    "/",
+    StaticFiles(directory=str(ROOT_DIR / "frontend"), html=True),
+    name="frontend",
+)

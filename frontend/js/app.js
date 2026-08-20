@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append("audio", file);
 
         try {
-            const response = await fetch("http://localhost:8000/transcribir", {
+            const response = await fetch("/transcribir", {
                 method: "POST",
                 body: formData
             });

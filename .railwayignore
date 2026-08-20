@@ -1,0 +1,17 @@
+.git
+.github
+.agents
+.codex
+.vscode
+.env
+.env.*
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+.ipynb_checkpoints
+embeddings
+dataset/wav
+*.log
+temp_*
