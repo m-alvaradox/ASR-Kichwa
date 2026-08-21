@@ -132,11 +132,47 @@ body {
 .audio-preview { width: 100%; height: 42px; }
 @keyframes pulso-grabacion { 50% { opacity: 0.35; transform: scale(0.8); } }
 
+.seccion-ejemplos { width: 100%; text-align: left; }
+.titulo-ejemplos { color: var(--title); font-size: 1.25rem; text-align: center; }
+.texto-ejemplos, .estado-ejemplos { color: var(--text-muted); font-size: 0.9rem; text-align: center; }
+.lista-audios-prueba {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+}
+.audio-prueba {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.05);
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+.audio-prueba.seleccionado { border-color: #D7BDA6; background: rgba(215,189,166,0.13); }
+.nombre-audio-prueba { color: var(--title); font-size: 0.9rem; font-weight: 600; text-align: center; }
+.audio-prueba audio { width: 100%; height: 36px; }
+.boton-usar-ejemplo {
+    padding: 8px 12px;
+    border: 1px solid rgba(215,189,166,0.45);
+    border-radius: 30px;
+    background: transparent;
+    color: var(--title);
+    cursor: pointer;
+    font: 600 0.85rem 'Baloo 2', sans-serif;
+}
+.boton-usar-ejemplo:hover { background: rgba(255,255,255,0.09); }
+.boton-usar-ejemplo:disabled { opacity: 0.7; cursor: wait; }
+
 @media (max-height: 760px), (max-width: 720px) {
     body { overflow: auto; }
     .pantalla { min-height: 100%; height: auto; padding: 24px; justify-content: center; }
     .tarjeta { padding: 32px 26px; gap: 16px; }
     .titulo-card { font-size: 2rem; }
+}
+@media (max-width: 520px) {
+    .lista-audios-prueba { grid-template-columns: 1fr; }
 }
 
 /* ─────────────────────────────────────

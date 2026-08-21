@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const textoBtnGrabar = document.getElementById('textoBtnGrabar');
     const estadoGrabacion = document.getElementById('estadoGrabacion');
     const audioPreview = document.getElementById('audioPreview');
+    const listaAudiosPrueba = document.getElementById('listaAudiosPrueba');
 
     const btnDescargarTXT = document.getElementById('btnDescargarTXT');
     const btnDescargarPDF = document.getElementById('btnDescargarPDF');
@@ -40,6 +41,73 @@ document.addEventListener('DOMContentLoaded', () => {
     btnCerrarAlerta.addEventListener('click', () => {
         modalAlerta.classList.remove('mostrar');
     });
+
+    cargarAudiosPrueba();
+
+    async function cargarAudiosPrueba() {
+        try {
+            const response = await fetch('/api/audios-prueba');
+            if (!response.ok) throw new Error('No se pudieron cargar los audios');
+            const audios = await response.json();
+
+            if (audios.length === 0) {
+                listaAudiosPrueba.innerHTML = '<p class="estado-ejemplos">No hay audios de prueba disponibles.</p>';
+                return;
+            }
+
+            listaAudiosPrueba.innerHTML = '';
+            audios.forEach((audio) => {
+                const item = document.createElement('article');
+                item.className = 'audio-prueba';
+
+                const nombre = document.createElement('span');
+                nombre.className = 'nombre-audio-prueba';
+                nombre.textContent = audio.nombre;
+
+                const reproductor = document.createElement('audio');
+                reproductor.controls = true;
+                reproductor.preload = 'metadata';
+                reproductor.src = audio.url;
+
+                const boton = document.createElement('button');
+                boton.type = 'button';
+                boton.className = 'boton-usar-ejemplo';
+                boton.textContent = 'Usar este audio';
+                boton.addEventListener('click', () => seleccionarAudioPrueba(audio, boton));
+
+                item.append(nombre, reproductor, boton);
+                listaAudiosPrueba.appendChild(item);
+            });
+        } catch (error) {
+            listaAudiosPrueba.innerHTML = '<p class="estado-ejemplos">No fue posible cargar los ejemplos.</p>';
+        }
+    }
+
+    async function seleccionarAudioPrueba(audio, boton) {
+        const textoOriginal = boton.textContent;
+        boton.disabled = true;
+        boton.textContent = 'Seleccionando…';
+        try {
+            const response = await fetch(audio.url);
+            if (!response.ok) throw new Error('No se pudo descargar el audio');
+            const blob = await response.blob();
+
+            limpiarGrabacion();
+            audioInput.value = '';
+            archivoAudio = new File([blob], audio.nombre, { type: blob.type || 'audio/wav' });
+            labelArchivo.textContent = `Ejemplo: ${audio.nombre}`;
+            btnTranscribir.disabled = false;
+
+            document.querySelectorAll('.audio-prueba.seleccionado').forEach((item) => item.classList.remove('seleccionado'));
+            boton.closest('.audio-prueba').classList.add('seleccionado');
+            boton.textContent = 'Audio seleccionado';
+        } catch (error) {
+            boton.textContent = textoOriginal;
+            mostrarAlerta('No se pudo seleccionar el audio de prueba. Inténtalo nuevamente.');
+        } finally {
+            boton.disabled = false;
+        }
+    }
 
     audioInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
@@ -177,6 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
         audioPreview.removeAttribute('src');
         if (previewUrl) URL.revokeObjectURL(previewUrl);
         previewUrl = null;
+        document.querySelectorAll('.audio-prueba.seleccionado').forEach((item) => item.classList.remove('seleccionado'));
     }
 
     btnTranscribir.addEventListener('click', async () => {

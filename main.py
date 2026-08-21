@@ -16,6 +16,7 @@ from models.decoder import KichwaDecoder1D
 app = FastAPI(title="API Traductor Kichwa")
 ROOT_DIR = Path(__file__).resolve().parent
 CHECKPOINT_DIR = ROOT_DIR / os.getenv("CHECKPOINT_DIR", "checkpoints")
+AUDIO_EXAMPLES_DIR = ROOT_DIR / "audios prueba"
 
 app.add_middleware(
     CORSMiddleware,
@@ -133,6 +134,30 @@ async def transcribir_audio(audio: UploadFile = File(...)):
 @app.get("/health", include_in_schema=False)
 def health():
     return {"status": "ok", "device": str(dispositivo)}
+
+
+@app.get("/api/audios-prueba", include_in_schema=False)
+def listar_audios_prueba():
+    if not AUDIO_EXAMPLES_DIR.exists():
+        return []
+
+    extensiones = {".wav", ".mp3"}
+    return [
+        {
+            "nombre": archivo.name,
+            "url": f"/audios-prueba/{archivo.name}",
+        }
+        for archivo in sorted(AUDIO_EXAMPLES_DIR.iterdir())
+        if archivo.is_file() and archivo.suffix.lower() in extensiones
+    ]
+
+
+if AUDIO_EXAMPLES_DIR.exists():
+    app.mount(
+        "/audios-prueba",
+        StaticFiles(directory=str(AUDIO_EXAMPLES_DIR)),
+        name="audios-prueba",
+    )
 
 
 # El frontend y la API se publican en el mismo dominio en Railway.

@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css?v=10">
+    <link rel="stylesheet" href="css/style.css?v=12">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
@@ -37,6 +37,14 @@
                 <p id="estadoGrabacion" class="estado-grabacion" aria-live="polite">Usa el micrófono de tu dispositivo</p>
                 <audio id="audioPreview" class="audio-preview" controls hidden></audio>
             </div>
+
+            <section class="seccion-ejemplos" aria-labelledby="tituloEjemplos">
+                <h2 id="tituloEjemplos" class="titulo-ejemplos">Audios de prueba</h2>
+                <p class="texto-ejemplos">Escucha un ejemplo y selecciónalo para probar el transcriptor.</p>
+                <div id="listaAudiosPrueba" class="lista-audios-prueba">
+                    <p class="estado-ejemplos">Cargando ejemplos…</p>
+                </div>
+            </section>
 
             <button id="btnTranscribir" class="boton-accion" disabled>Transcribir Audio</button>
         </div>
@@ -75,6 +83,6 @@
         </div>
     </div>
 
-    <script src="js/app.js?v=11"></script>
+    <script src="js/app.js?v=12"></script>
 </body>
 </html>
