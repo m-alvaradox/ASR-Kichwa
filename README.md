@@ -5,6 +5,9 @@ Kichwa y devuelve su transcripción. El proyecto usa un extractor acústico
 basado en Wav2Vec2, un decodificador convolucional entrenado con CTC, una API
 FastAPI y una interfaz web estática.
 
+<img width="1240" height="696" alt="1788234999247" src="https://github.com/user-attachments/assets/59b92b1b-1497-4c97-aa9f-7e6c84eab259" />
+
+
 > Este proyecto transcribe Kichwa a texto en Kichwa; no realiza traducción a
 > español.
 
